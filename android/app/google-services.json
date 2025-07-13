@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "438253666860",
+    "project_id": "fir-auth-a55ea",
+    "storage_bucket": "fir-auth-a55ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:438253666860:android:7d705c347ad4e996e10789",
+        "android_client_info": {
+          "package_name": "com.pushnotification"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "438253666860-a4v406j9pe0ggha5n3ida89q4q0icjuq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNlDo4hSFbGmWNwKPNso4hae26MaFCsMM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "438253666860-a4v406j9pe0ggha5n3ida89q4q0icjuq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
