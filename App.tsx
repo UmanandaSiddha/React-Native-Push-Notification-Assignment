@@ -10,6 +10,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
 import TokenScreen from './src/screens/TokenScreen';
 import NotificationHistoryScreen from './src/screens/NotificationHistoryScreen';
+import { NotificationProvider, useNotification } from './src/context/NotificationContext';
 
 // Type definitions
 export type RootStackParamList = {
@@ -18,7 +19,6 @@ export type RootStackParamList = {
 	TokenInfo: undefined;
 	History: undefined;
 };
-
 export type NavigationProps = StackNavigationProp<RootStackParamList>;
 export type NotificationScreenRouteProp = RouteProp<RootStackParamList, 'Notification'>;
 
@@ -41,21 +41,18 @@ const storeNotification = async (remoteMessage: FirebaseMessagingTypes.RemoteMes
 	}
 };
 
-// --- Main App Component ---
-const App: React.FC = () => {
-	const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+const AppContent: React.FC = () => {
+	const { increment } = useNotification();
 
+	// This useEffect runs only once to set up the listeners
 	useEffect(() => {
-		const setupCloudMessaging = async () => {
-			if (Platform.OS === 'android') {
-				await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-			}
+		const setupListeners = async () => {
+			await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
 
-			// Foreground messages
 			messaging().onMessage(async remoteMessage => {
-				console.log('Foreground Message:', remoteMessage);
 				if (remoteMessage.notification?.title && remoteMessage.notification?.body) {
 					await storeNotification(remoteMessage);
+					await increment();
 					NotificationModule.showCallNotification(
 						remoteMessage.notification.title,
 						remoteMessage.notification.body
@@ -63,55 +60,53 @@ const App: React.FC = () => {
 				}
 			});
 
-			// Background/Quit state messages handler
 			messaging().setBackgroundMessageHandler(async remoteMessage => {
-				console.log('Background Message:', remoteMessage);
 				await storeNotification(remoteMessage);
-			});
-
-			// --- Deep Linking Handlers ---
-			// App opened from a quit state
-			messaging().getInitialNotification().then(remoteMessage => {
-				if (remoteMessage) {
-					console.log('Notification caused app to open from quit state:', remoteMessage);
-					navigationRef.current?.navigate('Notification', {
-						title: remoteMessage.notification?.title,
-						body: remoteMessage.notification?.body
-					});
-				}
-			});
-
-			// App opened from background state
-			messaging().onNotificationOpenedApp(remoteMessage => {
-				console.log('Notification caused app to open from background state:', remoteMessage);
-				navigationRef.current?.navigate('Notification', {
-					title: remoteMessage.notification?.title,
-					body: remoteMessage.notification?.body
-				});
+				const storedCount = await AsyncStorage.getItem('notification_count');
+				const newCount = (Number(storedCount) || 0) + 1;
+				await AsyncStorage.setItem('notification_count', String(newCount));
 			});
 		};
+		setupListeners();
+	}, [increment]);
 
-		setupCloudMessaging();
-	}, []);
+	return (
+		<Stack.Navigator>
+			<Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Dashboard' }} />
+			<Stack.Screen name="Notification" component={NotificationScreen} />
+			<Stack.Screen name="TokenInfo" component={TokenScreen} options={{ title: 'FCM Token' }} />
+			<Stack.Screen name="History" component={NotificationHistoryScreen} options={{ title: 'Notification History' }} />
+		</Stack.Navigator>
+	);
+};
 
-	const linking = {
-		prefixes: ['pushnotification://'],
-		config: {
-			screens: {
-				Notification: 'call/:title/:body',
-			},
-		},
+const App: React.FC = () => {
+	const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+
+	const onReady = () => {
+		messaging().getInitialNotification().then(remoteMessage => {
+			if (remoteMessage) {
+				navigationRef.current?.navigate('Notification', {
+					title: remoteMessage.notification?.title,
+					body: remoteMessage.notification?.body,
+				});
+			}
+		});
+
+		messaging().onNotificationOpenedApp(remoteMessage => {
+			navigationRef.current?.navigate('Notification', {
+				title: remoteMessage.notification?.title,
+				body: remoteMessage.notification?.body
+			});
+		});
 	};
 
 	return (
-		<NavigationContainer ref={navigationRef} linking={linking}>
-			<Stack.Navigator>
-				<Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Dashboard' }} />
-				<Stack.Screen name="Notification" component={NotificationScreen} />
-				<Stack.Screen name="TokenInfo" component={TokenScreen} options={{ title: 'FCM Token' }} />
-				<Stack.Screen name="History" component={NotificationHistoryScreen} options={{ title: 'Notification History' }} />
-			</Stack.Navigator>
-		</NavigationContainer>
+		<NotificationProvider>
+			<NavigationContainer ref={navigationRef} onReady={onReady}>
+				<AppContent />
+			</NavigationContainer>
+		</NotificationProvider>
 	);
 };
 

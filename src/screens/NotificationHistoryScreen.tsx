@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
+import { useNotification } from '../context/NotificationContext';
 
 interface Notification {
     id: string;
@@ -13,6 +14,7 @@ interface Notification {
 const NotificationHistoryScreen: React.FC = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const isFocused = useIsFocused();
+    const { reset } = useNotification();
 
     useEffect(() => {
         const loadNotifications = async () => {
@@ -23,8 +25,9 @@ const NotificationHistoryScreen: React.FC = () => {
         };
         if(isFocused){
             loadNotifications();
+            reset();
         }
-    }, [isFocused]);
+    }, [isFocused, reset]);
 
     return (
         <View style={styles.container}>
